@@ -1,301 +1,319 @@
-// Abstract class for TodoItemFormatter
-class TodoItemFormatter {
-  formatTask(task) {
-    return task.length > 14 ? task.slice(0, 14) + "..." : task;
-  }
+﻿// app.js - Complete Todo Application
 
-  formatDueDate(dueDate) {
-    return dueDate || "No due date";
-  }
+const apiBaseUrl = '/api/todo';
 
-  formatStatus(completed) {
-    return completed ? "Completed" : "Pending";
-  }
-}
-
-// Class responsible for managing Todo items
-class TodoManager {
-  constructor(todoItemFormatter) {
-    this.todos = JSON.parse(localStorage.getItem("todos")) || [];
-    this.todoItemFormatter = todoItemFormatter;
-  }
-
-  addTodo(task, dueDate) {
-    const newTodo = {
-      id: this.getRandomId(),
-      task: this.todoItemFormatter.formatTask(task),
-      dueDate: this.todoItemFormatter.formatDueDate(dueDate),
-      completed: false,
-      status: "pending",
-    };
-    this.todos.push(newTodo);
-    this.saveToLocalStorage();
-    return newTodo;
-  }
-
-  editTodo(id, updatedTask) {
-      const todo = this.todos.find((t) => t.id === id);
-      if (todo) {
-        todo.task = updatedTask;
-        this.saveToLocalStorage();
-      }
-      return todo;
-    }
-  
-    deleteTodo(id) {
-      this.todos = this.todos.filter((todo) => todo.id !== id);
-      this.saveToLocalStorage();
-    }
-  
-    toggleTodoStatus(id) {
-      const todo = this.todos.find((t) => t.id === id);
-      if (todo) {
-        todo.completed = !todo.completed;
-        this.saveToLocalStorage();
-      }
-    }
-  
-    clearAllTodos() {
-      if (this.todos.length > 0) {
-        this.todos = [];
-        this.saveToLocalStorage();
-      }
-    }
-  
-    filterTodos(status) {
-      switch (status) {
-        case "all":
-          return this.todos;
-        case "pending":
-          return this.todos.filter((todo) => !todo.completed);
-        case "completed":
-          return this.todos.filter((todo) => todo.completed);
-        default:
-          return [];
-      }
-    }
-  
-    getRandomId() {
-      return (
-        Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15)
-      );
-    }
-  
-    saveToLocalStorage() {
-      localStorage.setItem("todos", JSON.stringify(this.todos));
-    }
-}
-
-// Class responsible for managing the UI and handling events
-class UIManager {
-  constructor(todoManager, todoItemFormatter) {
-    this.todoManager = todoManager;
-    this.todoItemFormatter = todoItemFormatter;
-    this.taskInput = document.querySelector("input");
-    this.dateInput = document.querySelector(".schedule-date");
-    this.addBtn = document.querySelector(".add-task-button");
-    this.todosListBody = document.querySelector(".todos-list-body");
-    this.alertMessage = document.querySelector(".alert-message");
-    this.deleteAllBtn = document.querySelector(".delete-all-btn");
-
-  this.addEventListeners();
-  this.showAllTodos();
-  }
-
-  addEventListeners() {
-      // Event listener for adding a new todo
-      this.addBtn.addEventListener("click", () => {
-          this.handleAddTodo();
-      });
-
-      // Event listener for pressing Enter key in the task input
-      this.taskInput.addEventListener("keyup", (e) => {
-          if (e.keyCode === 13 && this.taskInput.value.length > 0) {
-              this.handleAddTodo();
-          }
-      });
-
-      // Event listener for deleting all todos
-      this.deleteAllBtn.addEventListener("click", () => {
-          this.handleClearAllTodos();
-      });
-
-      // Event listeners for filter buttons
-      const filterButtons = document.querySelectorAll(".todos-filter li");
-      filterButtons.forEach((button) => {
-          button.addEventListener("click", () => {
-              const status = button.textContent.toLowerCase();
-              this.handleFilterTodos(status);
-          });
-      });
-  }
-
-  handleAddTodo() {
-    const task = this.taskInput.value;
-    const dueDate = this.dateInput.value;
-    if (task === "") {
-      this.showAlertMessage("Please enter a task", "error");
-    } else {
-      const newTodo = this.todoManager.addTodo(task, dueDate);
-      this.showAllTodos();
-      this.taskInput.value = "";
-      this.dateInput.value = "";
-      this.showAlertMessage("Task added successfully", "success");
-    }
-  }
-
-  handleClearAllTodos() {
-    this.todoManager.clearAllTodos();
-    this.showAllTodos();
-    this.showAlertMessage("All todos cleared successfully", "success");
-  }
-
-  showAllTodos() {
-    const todos = this.todoManager.filterTodos("all");
-    this.displayTodos(todos);
-  }
-
-  displayTodos(todos) {
-
-      this.todosListBody.innerHTML = "";
-      
-      if (todos.length === 0) {
-          this.todosListBody.innerHTML = `<tr><td colspan="5" class="text-center">No task found</td></tr>`;
-          return;
+class TodoService {
+    static async getAllTodos(status = 'all') {
+        try {
+            const response = await fetch(`${apiBaseUrl}?status=${status}`);
+            if (!response.ok) throw new Error('Failed to fetch todos');
+            const todos = await response.json();
+            return todos.map(todo => ({
+                id: todo.id,
+                title: todo.title,
+                dueDate: todo.dueDate,
+                isCompleted: todo.isCompleted,
+                isDelete: todo.isDelete
+            }));
+        } catch (error) {
+            console.error('Error fetching todos:', error);
+            throw error;
         }
-        
-      todos.forEach((todo) => {
-        this.todosListBody.innerHTML += `
-          <tr class="todo-item" data-id="${todo.id}">
-            <td>${this.todoItemFormatter.formatTask(todo.task)}</td>
-            <td>${this.todoItemFormatter.formatDueDate(todo.dueDate)}</td>
-            <td>${this.todoItemFormatter.formatStatus(todo.completed)}</td>
-            <td>
-              <button class="btn btn-warning btn-sm" onclick="uiManager.handleEditTodo('${
-                todo.id
-              }')">
-                <i class="bx bx-edit-alt bx-bx-xs"></i>    
-              </button>
-              <button class="btn btn-success btn-sm" onclick="uiManager.handleToggleStatus('${
-                todo.id
-              }')">
-                <i class="bx bx-check bx-xs"></i>
-              </button>
-              <button class="btn btn-error btn-sm" onclick="uiManager.handleDeleteTodo('${
-                todo.id
-              }')">
-                <i class="bx bx-trash bx-xs"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      });
     }
-    
 
-  
-handleEditTodo(id) {
-  const todo = this.todoManager.todos.find((t) => t.id === id);
-  if (todo) {
-    this.taskInput.value = todo.task;
-    this.todoManager.deleteTodo(id);
+    static async addTodo(todo) {
+        try {
+            const response = await fetch(apiBaseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    Title: todo.title,
+                    DueDate: todo.dueDate ? new Date(todo.dueDate).toISOString() : null,
+                    IsCompleted: todo.isCompleted
+                })
+            });
+            if (!response.ok) throw new Error('Failed to add todo');
+            return await response.json();
+        } catch (error) {
+            console.error('Error adding todo:', error);
+            throw error;
+        }
+    }
 
-    const handleUpdate = () => {
-      this.addBtn.innerHTML = "<i class='bx bx-plus bx-sm'></i>";
-      this.showAlertMessage("Todo updated successfully", "success");
-      this.showAllTodos();
-      this.addBtn.removeEventListener("click", handleUpdate);
-    };
+    static async updateTodo(id, todo) {
+        try {
+            const response = await fetch(`${apiBaseUrl}/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    Id: parseInt(id),
+                    Title: todo.title,
+                    DueDate: todo.dueDate ? new Date(todo.dueDate).toISOString() : null,
+                    IsCompleted: todo.isCompleted
+                })
+            });
+            if (!response.ok) throw new Error('Failed to update todo');
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating todo:', error);
+            throw error;
+        }
+    }
 
-    this.addBtn.innerHTML = "<i class='bx bx-check bx-sm'></i>";
-    this.addBtn.addEventListener("click", handleUpdate);
-  }
+    static async deleteTodo(id) {
+        try {
+            const response = await fetch(`${apiBaseUrl}/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error('Failed to delete todo');
+        } catch (error) {
+            console.error('Error deleting todo:', error);
+            throw error;
+        }
+    }
+
+    static async deleteAllTodos() {
+        try {
+            const response = await fetch(`${apiBaseUrl}/delete-all`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error('Failed to delete all todos');
+        } catch (error) {
+            console.error('Error deleting all todos:', error);
+            throw error;
+        }
+    }
+
+    static async toggleTodoStatus(id) {
+        try {
+            const response = await fetch(`${apiBaseUrl}/${id}/toggle`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (!response.ok) throw new Error('Failed to toggle todo status');
+            return await response.json();
+        } catch (error) {
+            console.error('Error toggling todo status:', error);
+            throw error;
+        }
+    }
 }
 
+class TodoUI {
+    constructor() {
+        this.taskInput = document.querySelector('input[type="text"]');
+        this.dateInput = document.querySelector('.schedule-date');
+        this.addBtn = document.querySelector('.add-task-button');
+        this.todosListBody = document.querySelector('.todos-list-body');
+        this.alertMessage = document.querySelector('.alert-message');
+        this.deleteAllBtn = document.querySelector('.delete-all-btn');
+        this.filterDropdown = document.querySelector('.dropdown-content');
 
-handleToggleStatus(id) {
-this.todoManager.toggleTodoStatus(id);
-this.showAllTodos();
+        this.setupEventListeners();
+        this.loadTodos();
+    }
+
+    setupEventListeners() {
+        this.addBtn.addEventListener('click', () => this.handleAddTodo());
+        this.taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handleAddTodo();
+        });
+        this.deleteAllBtn.addEventListener('click', () => this.handleDeleteAll());
+
+        document.querySelectorAll('.dropdown-content li').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const status = e.target.textContent.toLowerCase();
+                this.loadTodos(status);
+            });
+        });
+    }
+
+    async loadTodos(status = 'all') {
+        try {
+            const todos = await TodoService.getAllTodos(status);
+            this.renderTodos(todos);
+        } catch (error) {
+            this.showAlert(error.message, 'error');
+        }
+    }
+
+    renderTodos(todos) {
+        this.todosListBody.innerHTML = '';
+
+        if (todos.length === 0) {
+            this.todosListBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center">No tasks found</td>
+                </tr>
+            `;
+            return;
+        }
+
+        todos.forEach(todo => {
+            const row = document.createElement('tr');
+            row.className = todo.isCompleted ? 'completed' : '';
+            row.innerHTML = `
+                <td>${this.formatTask(todo.title)}</td>
+                <td>${this.formatDueDate(todo.dueDate)}</td>
+                <td>${todo.isCompleted ? 'Completed' : 'Pending'}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm edit-btn" data-id="${todo.id}">
+                        <i class="bx bx-edit-alt bx-xs"></i>
+                    </button>
+                    <button class="btn btn-${todo.isCompleted ? 'secondary' : 'success'} btn-sm toggle-btn" data-id="${todo.id}">
+                        <i class="bx bx-${todo.isCompleted ? 'x' : 'check'} bx-xs"></i>
+                    </button>
+                    <button class="btn btn-error btn-sm delete-btn" data-id="${todo.id}">
+                        <i class="bx bx-trash bx-xs"></i>
+                    </button>
+                </td>
+            `;
+
+            this.todosListBody.appendChild(row);
+        });
+
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleEditTodo(e.target.closest('button').dataset.id));
+        });
+
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleToggleStatus(e.target.closest('button').dataset.id));
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleDeleteTodo(e.target.closest('button').dataset.id));
+        });
+    }
+
+    async handleAddTodo() {
+        const title = this.taskInput.value.trim();
+        const dueDate = this.dateInput.value;
+
+        if (!title) {
+            this.showAlert('Please enter a task', 'error');
+            return;
+        }
+
+        try {
+            const newTodo = {
+                title: title,
+                dueDate: dueDate,
+                isCompleted: false
+            };
+
+            await TodoService.addTodo(newTodo);
+            this.taskInput.value = '';
+            this.dateInput.value = '';
+            this.loadTodos();
+            this.showAlert('Task added successfully', 'success');
+        } catch (error) {
+            this.showAlert(error.message, 'error');
+        }
+    }
+
+    async handleEditTodo(id) {
+        const newTitle = prompt('Enter new task title:');
+        if (newTitle && newTitle.trim()) {
+            try {
+                const todos = await TodoService.getAllTodos();
+                const todo = todos.find(t => t.id.toString() === id);
+
+                if (todo) {
+                    const updatedTodo = {
+                        ...todo,
+                        title: newTitle.trim()
+                    };
+
+                    await TodoService.updateTodo(id, updatedTodo);
+                    this.loadTodos();
+                    this.showAlert('Task updated successfully', 'success');
+                }
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        }
+    }
+
+    async handleToggleStatus(id) {
+        try {
+            const updatedTodo = await TodoService.toggleTodoStatus(id);
+            const rows = this.todosListBody.querySelectorAll('tr');
+            rows.forEach(row => {
+                if (row.querySelector('.toggle-btn').dataset.id === id) {
+                    row.className = updatedTodo.isCompleted ? 'completed' : '';
+                    const statusCell = row.cells[2];
+                    statusCell.textContent = updatedTodo.isCompleted ? 'Completed' : 'Pending';
+
+                    const toggleBtn = row.querySelector('.toggle-btn');
+                    toggleBtn.className = `btn btn-${updatedTodo.isCompleted ? 'secondary' : 'success'} btn-sm toggle-btn`;
+                    toggleBtn.innerHTML = `<i class="bx bx-${updatedTodo.isCompleted ? 'x' : 'check'} bx-xs"></i>`;
+                }
+            });
+        } catch (error) {
+            this.showAlert(error.message, 'error');
+        }
+    }
+
+    async handleDeleteTodo(id) {
+        if (confirm('Are you sure you want to delete this task?')) {
+            try {
+                await TodoService.deleteTodo(id);
+                this.loadTodos();
+                this.showAlert('Task deleted successfully', 'success');
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        }
+    }
+
+    async handleDeleteAll() {
+        if (confirm('Are you sure you want to delete ALL tasks? This cannot be undone.')) {
+            try {
+                await TodoService.deleteAllTodos();
+                this.loadTodos();
+                this.showAlert('All tasks deleted successfully', 'success');
+            } catch (error) {
+                this.showAlert(error.message, 'error');
+            }
+        }
+    }
+
+    formatTask(task) {
+        if (!task) return '';
+        return task.length > 14 ? task.slice(0, 14) + '...' : task;
+    }
+
+    formatDueDate(dueDate) {
+        if (!dueDate) return 'No due date';
+        try {
+            const date = new Date(dueDate);
+            return isNaN(date.getTime()) ? 'Invalid date' : date.toLocaleDateString();
+        } catch {
+            return 'Invalid date';
+        }
+    }
+
+    showAlert(message, type) {
+        this.alertMessage.innerHTML = `
+            <div class="alert alert-${type}">
+                <div>
+                    <span>${message}</span>
+                </div>
+            </div>
+        `;
+        setTimeout(() => {
+            this.alertMessage.innerHTML = '';
+        }, 3000);
+    }
 }
 
-handleDeleteTodo(id) {
-this.todoManager.deleteTodo(id);
-this.showAlertMessage("Todo deleted successfully", "success");
-this.showAllTodos();
-}
-
-
-handleFilterTodos(status) {
-  const filteredTodos = this.todoManager.filterTodos(status);
-  this.displayTodos(filteredTodos);
-}
-
-
-showAlertMessage(message, type) {
-const alertBox = `
-  <div class="alert alert-${type} shadow-lg mb-5 w-full">
-    <div>
-      <span>${message}</span>
-    </div>
-  </div>
-`;
-this.alertMessage.innerHTML = alertBox;
-this.alertMessage.classList.remove("hide");
-this.alertMessage.classList.add("show");
-setTimeout(() => {
-  this.alertMessage.classList.remove("show");
-  this.alertMessage.classList.add("hide");
-}, 3000);
-}
-}
-
-// Class responsible for managing the theme switcher
-class ThemeSwitcher {
-constructor(themes, html) {
-  this.themes = themes;
-  this.html = html;
-  this.init();
-}
-
-init() {
-  const theme = this.getThemeFromLocalStorage();
-  if (theme) {
-    this.setTheme(theme);
-  }
-
-  this.addThemeEventListeners();
-}
-
-addThemeEventListeners() {
-  this.themes.forEach((theme) => {
-    theme.addEventListener("click", () => {
-      const themeName = theme.getAttribute("theme");
-      this.setTheme(themeName);
-      this.saveThemeToLocalStorage(themeName);
-    });
-  });
-}
-
-setTheme(themeName) {
-  this.html.setAttribute("data-theme", themeName);
-}
-
-saveThemeToLocalStorage(themeName) {
-  localStorage.setItem("theme", themeName);
-}
-
-getThemeFromLocalStorage() {
-  return localStorage.getItem("theme");
-}
-}
-
-
-
-// Instantiating the classes
-const todoItemFormatter = new TodoItemFormatter();
-const todoManager = new TodoManager(todoItemFormatter);
-const uiManager = new UIManager(todoManager, todoItemFormatter);
-const themes = document.querySelectorAll(".theme-item");
-const html = document.querySelector("html");
-const themeSwitcher = new ThemeSwitcher(themes, html);
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new TodoUI();
+});
