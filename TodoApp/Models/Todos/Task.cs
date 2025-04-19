@@ -2,7 +2,7 @@
 
 namespace TodoApp.Models.Todos
 {
-    public class Task: BaseEntity
+    public class DoTask: BaseEntity
     {
         public string Title { get; set; }
         public DateTime DueDate { get; set; }
