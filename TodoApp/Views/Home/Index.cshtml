@@ -1,20 +1,15 @@
 ﻿<body>
-
-    <!-- Copyright -->
-@*     <footer>
-        <div class="author-text">
-            <p>Made with ❤️ by <a href="https://github.com/abdellatif-laghjaj" target="_blank"><b>Abdellatif Laghjaj</b></a></p>
-        </div>
-    </footer> *@
-
     <div class="container">
         <header>
             <h1>Todo List</h1>
             <!-- Error message -->
             <div class="alert-message"></div>
             <div class="input-section">
-                <input type="text" placeholder="Add a todo . . ." class="input input-bordered input-secondary w-full max-w-xs" />
-                <input type="date" class="input input-bordered input-secondary w-full max-w-xs schedule-date" />
+                <input type="text"
+                       placeholder="Add a todo . . ."
+                       class="input input-bordered input-secondary w-full max-w-xs task-input" />
+                <input type="date"
+                       class="input input-bordered input-secondary w-full max-w-xs schedule-date" />
                 <button class="btn btn-secondary add-task-button">
                     <i class="bx bx-plus bx-sm"></i>
                 </button>
@@ -25,12 +20,12 @@
             <div class="dropdown">
                 <label tabindex="0" class="btn m-1">Filter</label>
                 <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
-                    <li onclick="filterTodos('all')"><a>All</a></li>
-                    <li onclick="filterTodos('pending')"><a>Pending</a></li>
-                    <li onclick="filterTodos('completed')"><a>Completed</a></li>
+                    <li><a class="filter-option" data-status="all">All</a></li>
+                    <li><a class="filter-option" data-status="pending">Pending</a></li>
+                    <li><a class="filter-option" data-status="completed">Completed</a></li>
                 </ul>
             </div>
-            <button href="" class="btn btn-secondary delete-all-btn">
+            <button class="btn btn-secondary delete-all-btn">
                 Delete All
             </button>
         </div>
@@ -45,10 +40,10 @@
                 </tr>
             </thead>
             <tbody class="todos-list-body">
+                <!-- Tasks will be dynamically inserted here -->
             </tbody>
         </table>
-
     </div>
 
-
+    <script src="app.js"></script>
 </body>
